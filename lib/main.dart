@@ -40,6 +40,8 @@ class TakePictureScreen extends StatefulWidget {
 class TakePictureScreenState extends State<TakePictureScreen> {
   CameraController _controller;
   Future<void> _initializeControllerFuture;
+  var _vineyardRow = 0;
+  var _batch = 0;
 
   @override
   void initState() {
@@ -69,125 +71,146 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     return Material(
       type: MaterialType.transparency,
       child: new Stack(
-      children: <Widget>[
-        FutureBuilder<void>(
-          future: _initializeControllerFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.done) {
-              // If the Future is complete, display the preview.
-              return CameraPreview(_controller);
-            } else {
-              // Otherwise, display a loading indicator.
-              return Center(child: CircularProgressIndicator());
-            }
-          },
-        ),
-        Container(
-          height: 80,
-          child: AppBar(
-            title: Text('Barbara - South'),
-            backgroundColor: Colors.transparent,
+        children: <Widget>[
+          FutureBuilder<void>(
+            future: _initializeControllerFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.done) {
+                // If the Future is complete, display the preview.
+                return CameraPreview(_controller);
+              } else {
+                // Otherwise, display a loading indicator.
+                return Center(child: CircularProgressIndicator());
+              }
+            },
           ),
-        ),
-        Positioned(
-          bottom: 0,
-          left: 0,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: <Widget>[
-              FloatingActionButton(
-                onPressed: () {},
-                child: Icon(Icons.arrow_upward),
-                backgroundColor: Colors.transparent,
-                foregroundColor: Colors.white,
-              ),
-              Text(
-                '00',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontWeight: FontWeight.w500, color: Colors.white, fontSize: 20)
-              ),
-              FloatingActionButton(
-                onPressed: () {},
-                child: Icon(Icons.arrow_downward),
-                backgroundColor: Colors.transparent,
-                foregroundColor: Colors.white,
-              )
-            ],
-          ),
-        ),
-        Positioned(
-          bottom: 0,
-          right: 0,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: <Widget>[
-              FloatingActionButton(
-                onPressed: () {},
-                child: Icon(Icons.arrow_upward),
-                backgroundColor: Colors.transparent,
-                foregroundColor: Colors.white,
-              ),
-              Text(
-                  '00',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontWeight: FontWeight.w500, color: Colors.white, fontSize: 20)
-              ),
-              FloatingActionButton(
-                onPressed: () {},
-                child: Icon(Icons.arrow_downward),
-                backgroundColor: Colors.transparent,
-                foregroundColor: Colors.white,
-              )
-            ],
-          ),
-        ),
-        Container(
-          alignment: Alignment.bottomCenter,
-          child: FloatingActionButton(
+          Container(
+            height: 80,
+            child: AppBar(
+              title: Text('Barbara - South'),
               backgroundColor: Colors.transparent,
-              foregroundColor: Colors.white,
-              child: Icon(Icons.camera_alt, size: 50),
-              // Provide an onPressed callback.
-              onPressed: () async {
-                // Take the Picture in a try / catch block. If anything goes wrong,
-                // catch the error.
-                try {
-                  // Ensure that the camera is initialized.
-                  await _initializeControllerFuture;
+            ),
+          ),
+          Positioned(
+            top: 20,
+            right: 0,
+            child: FloatingActionButton(
+                onPressed: () {},
+                child: Icon(Icons.settings),
+                backgroundColor: Colors.transparent,
+                foregroundColor: Colors.white),
+          ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                FloatingActionButton(
+                  onPressed: () {
+                    setState(() {
+                      _vineyardRow++;
+                    });
+                  },
+                  child: Icon(Icons.arrow_upward),
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: Colors.white,
+                ),
+                Text(_vineyardRow.toString(),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                        fontSize: 20)),
+                FloatingActionButton(
+                  onPressed: () {
+                    setState(() {
+                      _vineyardRow--;
+                    });
+                  },
+                  child: Icon(Icons.arrow_downward),
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: Colors.white,
+                )
+              ],
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                FloatingActionButton(
+                  onPressed: () {
+                    setState(() {
+                      _batch++;
+                    });
+                  },
+                  child: Icon(Icons.arrow_upward),
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: Colors.white,
+                ),
+                Text(_batch.toString(),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                        fontSize: 20)),
+                FloatingActionButton(
+                  onPressed: () {
+                    setState(() {
+                      _batch--;
+                    });
+                  },
+                  child: Icon(Icons.arrow_downward),
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: Colors.white,
+                )
+              ],
+            ),
+          ),
+          Container(
+            alignment: Alignment.bottomCenter,
+            child: FloatingActionButton(
+                backgroundColor: Colors.transparent,
+                foregroundColor: Colors.white,
+                child: Icon(Icons.camera_alt, size: 50),
+                // Provide an onPressed callback.
+                onPressed: () async {
+                  // Take the Picture in a try / catch block. If anything goes wrong,
+                  // catch the error.
+                  try {
+                    // Ensure that the camera is initialized.
+                    await _initializeControllerFuture;
 
-                  // Construct the path where the image should be saved using the
-                  // pattern package.
-                  final path = join(
-                    // Store the picture in the temp directory.
-                    // Find the temp directory using the `path_provider` plugin.
-                    (await getTemporaryDirectory()).path,
-                    '${DateTime.now()}.png',
-                  );
+                    // Construct the path where the image should be saved using the
+                    // pattern package.
+                    final path = join(
+                      // Store the picture in the temp directory.
+                      // Find the temp directory using the `path_provider` plugin.
+                      (await getTemporaryDirectory()).path,
+                      '${DateTime.now()}.png',
+                    );
 
-                  // Attempt to take a picture and log where it's been saved.
-                  await _controller.takePicture(path);
+                    // Attempt to take a picture and log where it's been saved.
+                    await _controller.takePicture(path);
 
-                  // If the picture was taken, display it on a new screen.
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          DisplayPictureScreen(imagePath: path),
-                    ),
-                  );
-                } catch (e) {
-                  // If an error occurs, log the error to the console.
-                  print(e);
-                }
-              }),
-        ),
-      ],
-    ),
+                    setState(() {
+                      _batch++;
+                    });
+                  } catch (e) {
+                    // If an error occurs, log the error to the console.
+                    print(e);
+                  }
+                }),
+          ),
+        ],
+      ),
     );
   }
-
 }
 
 // A widget that displays the picture taken by the user.
