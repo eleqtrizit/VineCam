@@ -40,8 +40,22 @@ class TakePictureScreen extends StatefulWidget {
 class TakePictureScreenState extends State<TakePictureScreen> {
   CameraController _controller;
   Future<void> _initializeControllerFuture;
-  var _vineyardRow = 0;
-  var _batch = 0;
+  var _appDir = "";
+  var _vineyardRow = 1;
+  var _batch = 1;
+  var _picCount = 0;
+  var _subdir = "";
+  var _currentDir = "";
+
+
+  Future setAppDirectory() async {
+    Directory appDir = await getApplicationDocumentsDirectory();
+    print(appDir.path);
+    setState(() {
+      _appDir = appDir.path;
+    });
+    setDirectory();
+  }
 
   @override
   void initState() {
@@ -57,6 +71,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
 
     // Next, initialize the controller. This returns a Future.
     _initializeControllerFuture = _controller.initialize();
+    setAppDirectory();
   }
 
   @override
@@ -65,6 +80,72 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     _controller.dispose();
     super.dispose();
   }
+
+  String getDate(){
+    var date = DateTime.now();
+    var retDate = date.year.toString() + '.' + date.month.toString() + '.' +date.day.toString();
+    return retDate;
+  }
+
+  String getFilename(){
+    var date = DateTime.now();
+    var retDate = date.hour.toString() + "." + date.minute.toString() + "." +date.second.toString();
+    return retDate + '.jpg';
+  }
+
+  List<FileSystemEntity> listImages(path){
+    var dir = new Directory(path);
+    List contents = dir.listSync();
+    return contents;
+  }
+
+  String getPath(){
+    var date = getDate();
+    return '${_appDir}/${date}/vine_${_vineyardRow.toString()}/batch_${_batch.toString()}/';
+  }
+
+  setDirectory() async {
+    final path = getPath();
+    if (_currentDir != path) {
+      await new Directory(path).create(recursive: true);
+      setImageCount(path);
+      setState(() {
+        _currentDir = path;
+      });
+    }
+  }
+
+  changeBatch(diff){
+    var newNum =_batch + diff;
+    if (newNum>0){
+      setState(() {
+        _batch = _batch + diff;
+      });
+    }
+  }
+
+  changeVine(diff) {
+    var newNum = _vineyardRow + diff;
+    if (newNum>0){
+      setState(() {
+        _vineyardRow = _vineyardRow + diff;
+      });
+    }
+  }
+
+  Future<void> setImageCount(path) async {
+    List contents = listImages(path);
+    setState(() {
+      _picCount = contents.length;
+    });
+  }
+
+  Future<void> incImageCount() async {
+    setState(() {
+      _picCount++;
+    });
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -107,11 +188,16 @@ class TakePictureScreenState extends State<TakePictureScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
+                Text("Vine",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                        fontSize: 24)),
                 FloatingActionButton(
                   onPressed: () {
-                    setState(() {
-                      _vineyardRow++;
-                    });
+                    changeVine(1);
+                    setDirectory();
                   },
                   child: Icon(Icons.arrow_upward),
                   backgroundColor: Colors.transparent,
@@ -125,9 +211,8 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                         fontSize: 20)),
                 FloatingActionButton(
                   onPressed: () {
-                    setState(() {
-                      _vineyardRow--;
-                    });
+                    changeVine(-1);
+                    setDirectory();
                   },
                   child: Icon(Icons.arrow_downward),
                   backgroundColor: Colors.transparent,
@@ -143,11 +228,22 @@ class TakePictureScreenState extends State<TakePictureScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
+                Text("Pics\n" + _picCount.toString() + "\n\n",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                        fontSize: 24)),
+                Text("Batch",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                        fontSize: 24)),
                 FloatingActionButton(
                   onPressed: () {
-                    setState(() {
-                      _batch++;
-                    });
+                    changeBatch(1);
+                    setDirectory();
                   },
                   child: Icon(Icons.arrow_upward),
                   backgroundColor: Colors.transparent,
@@ -161,9 +257,8 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                         fontSize: 20)),
                 FloatingActionButton(
                   onPressed: () {
-                    setState(() {
-                      _batch--;
-                    });
+                    changeBatch(-1);
+                    setDirectory();
                   },
                   child: Icon(Icons.arrow_downward),
                   backgroundColor: Colors.transparent,
@@ -186,21 +281,13 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                     // Ensure that the camera is initialized.
                     await _initializeControllerFuture;
 
-                    // Construct the path where the image should be saved using the
-                    // pattern package.
-                    final path = join(
-                      // Store the picture in the temp directory.
-                      // Find the temp directory using the `path_provider` plugin.
-                      (await getTemporaryDirectory()).path,
-                      '${DateTime.now()}.png',
-                    );
+                    var filename = getFilename();
+                    setDirectory();
 
                     // Attempt to take a picture and log where it's been saved.
-                    await _controller.takePicture(path);
+                    await _controller.takePicture(_currentDir+filename);
+                    await incImageCount();
 
-                    setState(() {
-                      _batch++;
-                    });
                   } catch (e) {
                     // If an error occurs, log the error to the console.
                     print(e);
