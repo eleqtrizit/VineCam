@@ -3,8 +3,8 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:path/path.dart' show join;
 import 'package:path_provider/path_provider.dart';
+import 'grape_model.dart';
 
 Future<void> main() async {
   // Obtain a list of the available cameras on the device.
@@ -22,6 +22,18 @@ Future<void> main() async {
       ),
     ),
   );
+}
+
+class SettingsScreen extends StatelessWidget {
+  @override
+  Widget build (BuildContext context) {
+    return new Scaffold(
+      appBar: new AppBar(
+        title: new Text("Multi Page Application Page-1"),
+      ),
+      body: new Text("Another Page...!!!!!!"),
+    );
+  }
 }
 
 // A screen that allows users to take a picture using a given camera.
@@ -44,9 +56,36 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   var _vineyardRow = 1;
   var _batch = 1;
   var _picCount = 0;
-  var _subdir = "";
   var _currentDir = "";
+  List<Grape> _grapes = [];
+  Grape _currentGrape;
+  List<String> _direction = [];
+  var _currentDirection="";
 
+  void populateDirections() {
+    _direction.add("N");
+    _direction.add("S");
+    _direction.add("E");
+    _direction.add("W");
+  }
+
+  void setCurrentDirection(){
+    if (_currentDirection==""){
+      print("Setting direction to " + _direction[0]);
+      _currentDirection=_direction[0];
+    }
+  }
+
+  void populateGrapes() {
+    _grapes.add(new Grape("Cabernet Sauvignon"));
+    _grapes.add(new Grape("Syrah"));
+  }
+
+  void setCurrentGrape(){
+    if (_currentGrape==null){
+      _currentGrape = _grapes[0];
+    }
+  }
 
   Future setAppDirectory() async {
     Directory appDir = await getApplicationDocumentsDirectory();
@@ -72,6 +111,10 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     // Next, initialize the controller. This returns a Future.
     _initializeControllerFuture = _controller.initialize();
     setAppDirectory();
+    populateGrapes();
+    setCurrentGrape();
+    populateDirections();
+    setCurrentDirection();
   }
 
   @override
@@ -101,7 +144,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
 
   String getPath(){
     var date = getDate();
-    return '${_appDir}/${date}/vine_${_vineyardRow.toString()}/batch_${_batch.toString()}/';
+    return '$_appDir/$date/vine_$_vineyardRow.toString()/batch_$_batch.toString()/';
   }
 
   setDirectory() async {
@@ -165,18 +208,38 @@ class TakePictureScreenState extends State<TakePictureScreen> {
               }
             },
           ),
-          Container(
-            height: 80,
-            child: AppBar(
-              title: Text('Barbara - South'),
-              backgroundColor: Colors.transparent,
+          Positioned(
+            top: 30,
+            left: 10,
+            child: Text(_currentDirection,
+              textAlign: TextAlign.left,
+              style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                  fontSize: 24),
+            ),
+          ),
+          Positioned(
+            top: 30,
+            left: 60,
+            child: Text(_currentGrape.getGrapeName(),
+              textAlign: TextAlign.left,
+              style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                  fontSize: 24),
             ),
           ),
           Positioned(
             top: 20,
             right: 0,
             child: FloatingActionButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    new MaterialPageRoute(builder: (context) => new SettingsScreen()),
+                  );
+                },
                 child: Icon(Icons.settings),
                 backgroundColor: Colors.transparent,
                 foregroundColor: Colors.white),
