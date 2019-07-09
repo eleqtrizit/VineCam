@@ -5,6 +5,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'grape_model.dart';
+import 'package:simple_permissions/simple_permissions.dart';
 
 var test = "";
 
@@ -44,12 +45,13 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   Future<void> _initializeControllerFuture;
   var _appDir = "";
   var _vineyardRow = 1;
-  var _batch = 1;
+  var _cluster = 1;
   var _picCount = 0;
   var _currentDir = "";
   List<Grape> _grapes = [];
   Grape _currentGrape;
   var _currentDirection = "";
+  bool _permissionsGranted = false;
 
   Color isActive(cmp1, cmp2) {
     if (cmp1 == cmp2) {
@@ -127,7 +129,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   }
 
   Future setAppDirectory() async {
-    Directory appDir = await getApplicationDocumentsDirectory();
+    Directory appDir = await getExternalStorageDirectory();
     print(appDir.path);
     setState(() {
       _appDir = appDir.path + "/VineCamPhotos/";
@@ -135,20 +137,38 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     setDirectory();
   }
 
+  // Platform messages are asynchronous, so we initialize in an async method.
+  Future requestWritePermission() async {
+    PermissionStatus permissionWriteStatus = await SimplePermissions.requestPermission(Permission.WriteExternalStorage);
+    //PermissionStatus permissionReadStatus = await SimplePermissions.requestPermission(Permission.ReadExternalStorage);
+    PermissionStatus permissionCamera = await SimplePermissions.requestPermission(Permission.Camera);
+    //PermissionStatus permissionAudio = await SimplePermissions.requestPermission(Permission.RecordAudio);
+
+    if (permissionWriteStatus == PermissionStatus.authorized && permissionCamera == PermissionStatus.authorized) {
+      // To display the current output from the Camera,
+      // create a CameraController.
+      _controller = CameraController(
+        // Get a specific camera from the list of available cameras.
+          widget.camera,
+          // Define the resolution to use.
+          ResolutionPreset.medium,
+          enableAudio: false
+      );
+
+      // Next, initialize the controller. This returns a Future.
+      _initializeControllerFuture = _controller.initialize();
+      setState(() {
+        _permissionsGranted = true;
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    // To display the current output from the Camera,
-    // create a CameraController.
-    _controller = CameraController(
-      // Get a specific camera from the list of available cameras.
-      widget.camera,
-      // Define the resolution to use.
-      ResolutionPreset.medium,
-    );
+    requestWritePermission();
 
-    // Next, initialize the controller. This returns a Future.
-    _initializeControllerFuture = _controller.initialize();
+
     setAppDirectory();
     populateGrapes();
     setDefaultGrape();
@@ -190,7 +210,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
 
   String getPath() {
     var date = getDate();
-    return '$_appDir/${_currentGrape.getGrapeFilename()}/$date/vine_${_vineyardRow.toString()}/$_currentDirection/batch_${_batch.toString()}/';
+    return '$_appDir/${_currentGrape.getGrapeFilename()}/$date/vine_${_vineyardRow.toString()}/$_currentDirection/cluster${_cluster.toString()}/';
   }
 
   setDirectory() async {
@@ -205,10 +225,10 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   }
 
   changeCluster(diff) {
-    var newNum = _batch + diff;
+    var newNum = _cluster + diff;
     if (newNum > 0) {
       setState(() {
-        _batch = _batch + diff;
+        _cluster = _cluster + diff;
       });
     }
   }
@@ -337,15 +357,15 @@ class TakePictureScreenState extends State<TakePictureScreen> {
             directories[index]
                     .path
                     .split('/')
-                    .skip(7)
+                    .skip(5)
                     .take(1)
                     .toList()
                     .join('') +
-                "\n" +
+                "-\n" +
                 directories[index]
                     .path
                     .split('/')
-                    .skip(8)
+                    .skip(6)
                     .toList()
                     .join('     '),
             style: TextStyle(
@@ -364,7 +384,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
         new Directory(dirName).list(recursive: true, followLinks: false);
     await for (FileSystemEntity entity in dirList) {
       if (entity is Directory) {
-        if (entity.path.split('/').length > 11) {
+        if (entity.path.split('/').length > 9) {
           directories.add(entity);
         }
       }
@@ -523,7 +543,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                   backgroundColor: Colors.transparent,
                   foregroundColor: Colors.white,
                 ),
-                Text(_batch.toString(),
+                Text(_cluster.toString(),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                         fontWeight: FontWeight.w500,
