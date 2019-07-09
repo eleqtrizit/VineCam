@@ -50,6 +50,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   List<Grape> _grapes = [];
   Grape _currentGrape;
   var _currentDirection = "";
+  List<Object> allImage = new List();
 
   Color isActive(cmp1, cmp2) {
     if (cmp1 == cmp2) {
@@ -57,6 +58,53 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     } else {
       return Colors.grey;
     }
+  }
+
+  Future<void> loadImageList(directory) async {
+    List allImageTemp = [];
+
+    var dirList = directory.list(recursive: true, followLinks: false);
+
+    await for (FileSystemEntity entity in dirList) {
+      if (entity is File) {
+        allImageTemp.add(entity.path);
+      }
+    }
+    setState(() {
+      this.allImage = allImageTemp;
+    });
+  }
+
+  showGallery(BuildContext context, directory) {
+    loadImageList(directory);
+    return Navigator.of(context).push(MaterialPageRoute(builder: (context)
+    {
+      return new Scaffold(
+        appBar: new AppBar(
+          title: const Text('Photo Gallery'),
+        ),
+        body: _buildGrid(),
+      );
+    }));
+  }
+
+  Widget _buildGrid() {
+    return GridView.extent(
+        maxCrossAxisExtent: 400.0,
+        // padding: const EdgeInsets.all(4.0),
+        mainAxisSpacing: 1.0,
+        crossAxisSpacing: 1.0,
+        children: _buildGridTileList(allImage.length));
+  }
+
+  List<Container> _buildGridTileList(int count) {
+    return List<Container>.generate(
+        count,
+        (int index) => Container(
+                child: Image.file(
+              File(allImage[index].toString()),
+              fit: BoxFit.fitWidth,
+            )));
   }
 
   void setCurrentDirection(newDirection) {
@@ -285,52 +333,58 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     }));
   }
 
-  buildDirListing (BuildContext context, int index, directories) {
+  buildDirListing(BuildContext context, int index, directories) {
     return SimpleDialogOption(
-        child: Text(directories[index].path.split('/').skip(7).take(1).toList().join('') + "\n" +
-            directories[index].path.split('/').skip(8).toList().join('     '),
+        child: Text(
+            directories[index]
+                    .path
+                    .split('/')
+                    .skip(7)
+                    .take(1)
+                    .toList()
+                    .join('') +
+                "\n" +
+                directories[index]
+                    .path
+                    .split('/')
+                    .skip(8)
+                    .toList()
+                    .join('     '),
             style: TextStyle(
                 fontWeight: FontWeight.w300,
                 color: Colors.white,
                 fontSize: 18)),
         onPressed: () {
-          setState(() {
-
-          });
-          Navigator.pop(context);
+          setState(() {});
+          showGallery(context, directories[index]);
         });
   }
 
-  directoryListings(BuildContext context, dirName) {
+  Future directoryListings(BuildContext context, dirName) async {
     List<Directory> directories = [];
-    List<File> files=[];
-    var dir = new Directory(dirName);
-    dir
-        .list(recursive: true, followLinks: false)
-        .listen((FileSystemEntity entity) {
-          if (entity is Directory) {
-            if (entity.path.split('/').length>11){
-              directories.add(entity);
-            }
-          }
-          if (entity is File){
-            files.add(entity);
-          }
-    });
+    var dirList =
+        new Directory(dirName).list(recursive: true, followLinks: false);
+    await for (FileSystemEntity entity in dirList) {
+      if (entity is Directory) {
+        if (entity.path.split('/').length > 11) {
+          directories.add(entity);
+        }
+      }
+    }
 
     return Navigator.of(context).push(MaterialPageRoute(builder: (context) {
       return Scaffold(
-          appBar: AppBar(
-            title: const Text('Image Directory'),
+        appBar: AppBar(
+          title: const Text('Image Directory'),
+        ),
+        body: Center(
+          child: new ListView.builder(
+            itemCount: directories.length,
+            itemBuilder: (BuildContext context, int index) =>
+                buildDirListing(context, index, directories),
           ),
-          body: Center(
-            child: new ListView.builder(
-              itemCount: directories.length,
-              itemBuilder: (BuildContext context, int index) =>
-                  buildDirListing(context, index, directories),
-            ),
-            ),
-          );
+        ),
+      );
     }));
   }
 
@@ -394,7 +448,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
             child: FloatingActionButton(
                 heroTag: "galleryBtn",
                 onPressed: () {
-                  directoryListings(context,_appDir);
+                  directoryListings(context, _appDir);
                 },
                 child: Icon(Icons.image),
                 backgroundColor: Colors.transparent,
