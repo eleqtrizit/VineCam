@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'grape_model.dart';
 
+var test = "";
+
 Future<void> main() async {
   // Obtain a list of the available cameras on the device.
   final cameras = await availableCameras();
@@ -22,18 +24,6 @@ Future<void> main() async {
       ),
     ),
   );
-}
-
-class SettingsScreen extends StatelessWidget {
-  @override
-  Widget build (BuildContext context) {
-    return new Scaffold(
-      appBar: new AppBar(
-        title: new Text("Multi Page Application Page-1"),
-      ),
-      body: new Text("Another Page...!!!!!!"),
-    );
-  }
 }
 
 // A screen that allows users to take a picture using a given camera.
@@ -59,21 +49,24 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   var _currentDir = "";
   List<Grape> _grapes = [];
   Grape _currentGrape;
-  List<String> _direction = [];
-  var _currentDirection="";
+  var _currentDirection = "";
 
-  void populateDirections() {
-    _direction.add("N");
-    _direction.add("S");
-    _direction.add("E");
-    _direction.add("W");
+  Color isActive(cmp1, cmp2) {
+    if (cmp1 == cmp2) {
+      return Colors.blue;
+    } else {
+      return Colors.grey;
+    }
   }
 
-  void setCurrentDirection(){
-    if (_currentDirection==""){
-      print("Setting direction to " + _direction[0]);
-      _currentDirection=_direction[0];
-    }
+  void setCurrentDirection(newDirection) {
+    setState(() {
+      if (newDirection == "") {
+        _currentDirection = "North";
+      } else {
+        _currentDirection = newDirection;
+      }
+    });
   }
 
   void populateGrapes() {
@@ -81,8 +74,8 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     _grapes.add(new Grape("Syrah"));
   }
 
-  void setCurrentGrape(){
-    if (_currentGrape==null){
+  void setDefaultGrape() {
+    if (_currentGrape == null) {
       _currentGrape = _grapes[0];
     }
   }
@@ -112,9 +105,8 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     _initializeControllerFuture = _controller.initialize();
     setAppDirectory();
     populateGrapes();
-    setCurrentGrape();
-    populateDirections();
-    setCurrentDirection();
+    setDefaultGrape();
+    setCurrentDirection("");
   }
 
   @override
@@ -124,27 +116,35 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     super.dispose();
   }
 
-  String getDate(){
+  String getDate() {
     var date = DateTime.now();
-    var retDate = date.year.toString() + '.' + date.month.toString() + '.' +date.day.toString();
+    var retDate = date.year.toString() +
+        '.' +
+        date.month.toString() +
+        '.' +
+        date.day.toString();
     return retDate;
   }
 
-  String getFilename(){
+  String getFilename() {
     var date = DateTime.now();
-    var retDate = date.hour.toString() + "." + date.minute.toString() + "." +date.second.toString();
+    var retDate = date.hour.toString() +
+        "." +
+        date.minute.toString() +
+        "." +
+        date.second.toString();
     return retDate + '.jpg';
   }
 
-  List<FileSystemEntity> listImages(path){
+  List<FileSystemEntity> listImages(path) {
     var dir = new Directory(path);
     List contents = dir.listSync();
     return contents;
   }
 
-  String getPath(){
+  String getPath() {
     var date = getDate();
-    return '$_appDir/$date/vine_$_vineyardRow.toString()/batch_$_batch.toString()/';
+    return '$_appDir/$date/vine_$_vineyardRow.toString()-$_currentDirection[0]/batch_$_batch.toString()/';
   }
 
   setDirectory() async {
@@ -158,9 +158,9 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     }
   }
 
-  changeBatch(diff){
-    var newNum =_batch + diff;
-    if (newNum>0){
+  changeCluster(diff) {
+    var newNum = _batch + diff;
+    if (newNum > 0) {
       setState(() {
         _batch = _batch + diff;
       });
@@ -169,7 +169,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
 
   changeVine(diff) {
     var newNum = _vineyardRow + diff;
-    if (newNum>0){
+    if (newNum > 0) {
       setState(() {
         _vineyardRow = _vineyardRow + diff;
       });
@@ -189,6 +189,102 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     });
   }
 
+  SimpleDialogOption _directionList(val) {
+    return SimpleDialogOption(
+        child: Text(val + "\n\n",
+            style: TextStyle(
+                fontWeight: FontWeight.w300,
+                color: Colors.white,
+                fontSize: 24)),
+        onPressed: () {
+          setCurrentDirection(val);
+          Navigator.pop(context);
+          setState(() {});
+        });
+  }
+
+  Widget simpleListOption(msg, callback) {
+    return SimpleDialogOption(
+        child: Text(msg + "\n\n",
+            style: TextStyle(
+                fontWeight: FontWeight.w300,
+                color: Colors.white,
+                fontSize: 24)),
+        onPressed: () {
+          callback(context);
+        });
+  }
+
+  settingsDirection(BuildContext context) {
+    return Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+      return Scaffold(
+          appBar: AppBar(
+            title: const Text('Set Direction'),
+          ),
+          body: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                _directionList("North"),
+                _directionList("South"),
+                _directionList("East"),
+                _directionList("West"),
+              ],
+            ),
+          ));
+    }));
+  }
+
+  // called below in SettingsGrapeType
+  Widget buildBody(BuildContext context, int index) {
+    return SimpleDialogOption(
+        child: Text(_grapes[index].getGrapeName(),
+            style: TextStyle(
+                fontWeight: FontWeight.w300,
+                color: Colors.white,
+                fontSize: 24)),
+        onPressed: () {
+          setState(() {
+            _currentGrape = _grapes[index];
+          });
+          Navigator.pop(context);
+        });
+  }
+
+  settingsGrapeType(BuildContext context) {
+    return Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+      return Scaffold(
+          appBar: AppBar(
+            title: const Text('Select Grape Type'),
+          ),
+          body: Center(
+            child: new ListView.builder(
+              itemCount: _grapes.length,
+              itemBuilder: (BuildContext context, int index) =>
+                  buildBody(context, index),
+            ),
+          ));
+    }));
+  }
+
+  settings(BuildContext context) {
+    return Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+      return Scaffold(
+          appBar: AppBar(
+            title: const Text('Settings'),
+          ),
+          body: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                
+                simpleListOption("Set Direction", settingsDirection),
+                simpleListOption("Set Grape Type", settingsGrapeType),
+              ],
+            ),
+          ));
+    }));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -211,7 +307,8 @@ class TakePictureScreenState extends State<TakePictureScreen> {
           Positioned(
             top: 30,
             left: 10,
-            child: Text(_currentDirection,
+            child: Text(
+              _currentDirection[0],
               textAlign: TextAlign.left,
               style: TextStyle(
                   fontWeight: FontWeight.w500,
@@ -222,7 +319,8 @@ class TakePictureScreenState extends State<TakePictureScreen> {
           Positioned(
             top: 30,
             left: 60,
-            child: Text(_currentGrape.getGrapeName(),
+            child: Text(
+              _currentGrape.getGrapeName(),
               textAlign: TextAlign.left,
               style: TextStyle(
                   fontWeight: FontWeight.w500,
@@ -234,11 +332,9 @@ class TakePictureScreenState extends State<TakePictureScreen> {
             top: 20,
             right: 0,
             child: FloatingActionButton(
+                heroTag: "settingsBtn",
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    new MaterialPageRoute(builder: (context) => new SettingsScreen()),
-                  );
+                  settings(context);
                 },
                 child: Icon(Icons.settings),
                 backgroundColor: Colors.transparent,
@@ -258,6 +354,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                         color: Colors.white,
                         fontSize: 24)),
                 FloatingActionButton(
+                  heroTag: "incVineBtn",
                   onPressed: () {
                     changeVine(1);
                     setDirectory();
@@ -273,6 +370,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                         color: Colors.white,
                         fontSize: 20)),
                 FloatingActionButton(
+                  heroTag: "decVineBtn",
                   onPressed: () {
                     changeVine(-1);
                     setDirectory();
@@ -297,15 +395,16 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                         fontWeight: FontWeight.w500,
                         color: Colors.white,
                         fontSize: 24)),
-                Text("Batch",
+                Text("Cluster",
                     textAlign: TextAlign.center,
                     style: TextStyle(
                         fontWeight: FontWeight.w500,
                         color: Colors.white,
                         fontSize: 24)),
                 FloatingActionButton(
+                  heroTag: "IncClusterBtn",
                   onPressed: () {
-                    changeBatch(1);
+                    changeCluster(1);
                     setDirectory();
                   },
                   child: Icon(Icons.arrow_upward),
@@ -319,8 +418,9 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                         color: Colors.white,
                         fontSize: 20)),
                 FloatingActionButton(
+                  heroTag: "decClusterBtn",
                   onPressed: () {
-                    changeBatch(-1);
+                    changeCluster(-1);
                     setDirectory();
                   },
                   child: Icon(Icons.arrow_downward),
@@ -333,6 +433,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
           Container(
             alignment: Alignment.bottomCenter,
             child: FloatingActionButton(
+                heroTag: "takePictureBtn",
                 backgroundColor: Colors.transparent,
                 foregroundColor: Colors.white,
                 child: Icon(Icons.camera_alt, size: 50),
@@ -348,9 +449,8 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                     setDirectory();
 
                     // Attempt to take a picture and log where it's been saved.
-                    await _controller.takePicture(_currentDir+filename);
+                    await _controller.takePicture(_currentDir + filename);
                     await incImageCount();
-
                   } catch (e) {
                     // If an error occurs, log the error to the console.
                     print(e);
@@ -359,23 +459,6 @@ class TakePictureScreenState extends State<TakePictureScreen> {
           ),
         ],
       ),
-    );
-  }
-}
-
-// A widget that displays the picture taken by the user.
-class DisplayPictureScreen extends StatelessWidget {
-  final String imagePath;
-
-  const DisplayPictureScreen({Key key, this.imagePath}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Display the Picture')),
-      // The image is stored as a file on the device. Use the `Image.file`
-      // constructor with the given path to display the image.
-      body: Image.file(File(imagePath)),
     );
   }
 }
