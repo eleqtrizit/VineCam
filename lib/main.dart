@@ -50,7 +50,6 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   List<Grape> _grapes = [];
   Grape _currentGrape;
   var _currentDirection = "";
-  List<Object> allImage = new List();
 
   Color isActive(cmp1, cmp2) {
     if (cmp1 == cmp2) {
@@ -60,49 +59,48 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     }
   }
 
-  Future<void> loadImageList(directory) async {
-    List allImageTemp = [];
+  Future loadImageList(directory) async {
+    List allImages = [];
 
     var dirList = directory.list(recursive: true, followLinks: false);
 
     await for (FileSystemEntity entity in dirList) {
       if (entity is File) {
-        allImageTemp.add(entity.path);
+        allImages.add(entity.path);
       }
     }
-    setState(() {
-      this.allImage = allImageTemp;
-    });
+    return allImages;
   }
 
-  showGallery(BuildContext context, directory) {
-    loadImageList(directory);
+
+  Future showGallery(BuildContext context, directory) async {
+    List allImages = await loadImageList(directory);
     return Navigator.of(context).push(MaterialPageRoute(builder: (context)
     {
       return new Scaffold(
         appBar: new AppBar(
           title: const Text('Photo Gallery'),
         ),
-        body: _buildGrid(),
+        body: _buildGrid(allImages),
       );
     }));
   }
 
-  Widget _buildGrid() {
+  Widget _buildGrid(allImages) {
     return GridView.extent(
-        maxCrossAxisExtent: 400.0,
+        maxCrossAxisExtent: 500.0,
         // padding: const EdgeInsets.all(4.0),
         mainAxisSpacing: 1.0,
         crossAxisSpacing: 1.0,
-        children: _buildGridTileList(allImage.length));
+        children: _buildGridTileList(allImages.length,allImages));
   }
 
-  List<Container> _buildGridTileList(int count) {
+  List<Container> _buildGridTileList(int count,List allImages) {
     return List<Container>.generate(
         count,
         (int index) => Container(
                 child: Image.file(
-              File(allImage[index].toString()),
+              File(allImages[index].toString()),
               fit: BoxFit.fitWidth,
             )));
   }
