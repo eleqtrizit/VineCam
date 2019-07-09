@@ -84,7 +84,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     Directory appDir = await getApplicationDocumentsDirectory();
     print(appDir.path);
     setState(() {
-      _appDir = appDir.path;
+      _appDir = appDir.path + "/VineCamPhotos/";
     });
     setDirectory();
   }
@@ -120,9 +120,9 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     var date = DateTime.now();
     var retDate = date.year.toString() +
         '.' +
-        date.month.toString() +
+        date.month.toString().padLeft(2, '0') +
         '.' +
-        date.day.toString();
+        date.day.toString().padLeft(2, '0');
     return retDate;
   }
 
@@ -130,9 +130,9 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     var date = DateTime.now();
     var retDate = date.hour.toString() +
         "." +
-        date.minute.toString() +
+        date.minute.toString().padLeft(2, '0') +
         "." +
-        date.second.toString();
+        date.second.toString().padLeft(2, '0');
     return retDate + '.jpg';
   }
 
@@ -144,7 +144,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
 
   String getPath() {
     var date = getDate();
-    return '$_appDir/$date/vine_$_vineyardRow.toString()-$_currentDirection[0]/batch_$_batch.toString()/';
+    return '$_appDir/${_currentGrape.getGrapeFilename()}/$date/vine_${_vineyardRow.toString()}/$_currentDirection/batch_${_batch.toString()}/';
   }
 
   setDirectory() async {
@@ -277,12 +277,60 @@ class TakePictureScreenState extends State<TakePictureScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                
                 simpleListOption("Set Direction", settingsDirection),
                 simpleListOption("Set Grape Type", settingsGrapeType),
               ],
             ),
           ));
+    }));
+  }
+
+  buildDirListing (BuildContext context, int index, directories) {
+    return SimpleDialogOption(
+        child: Text(directories[index].path.split('/').skip(7).take(1).toList().join('') + "\n" +
+            directories[index].path.split('/').skip(8).toList().join('     '),
+            style: TextStyle(
+                fontWeight: FontWeight.w300,
+                color: Colors.white,
+                fontSize: 18)),
+        onPressed: () {
+          setState(() {
+
+          });
+          Navigator.pop(context);
+        });
+  }
+
+  directoryListings(BuildContext context, dirName) {
+    List<Directory> directories = [];
+    List<File> files=[];
+    var dir = new Directory(dirName);
+    dir
+        .list(recursive: true, followLinks: false)
+        .listen((FileSystemEntity entity) {
+          if (entity is Directory) {
+            if (entity.path.split('/').length>11){
+              directories.add(entity);
+            }
+          }
+          if (entity is File){
+            files.add(entity);
+          }
+    });
+
+    return Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+      return Scaffold(
+          appBar: AppBar(
+            title: const Text('Image Directory'),
+          ),
+          body: Center(
+            child: new ListView.builder(
+              itemCount: directories.length,
+              itemBuilder: (BuildContext context, int index) =>
+                  buildDirListing(context, index, directories),
+            ),
+            ),
+          );
     }));
   }
 
@@ -337,6 +385,18 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                   settings(context);
                 },
                 child: Icon(Icons.settings),
+                backgroundColor: Colors.transparent,
+                foregroundColor: Colors.white),
+          ),
+          Positioned(
+            top: 100,
+            right: 0,
+            child: FloatingActionButton(
+                heroTag: "galleryBtn",
+                onPressed: () {
+                  directoryListings(context,_appDir);
+                },
+                child: Icon(Icons.image),
                 backgroundColor: Colors.transparent,
                 foregroundColor: Colors.white),
           ),
