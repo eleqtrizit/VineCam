@@ -8,8 +8,7 @@ class Grape {
 
   addGrape(name){
     _name=name;
-    _filename=name;
-    _filename.replaceAll(new RegExp(r"\s+"), "_");
+    _filename=name.replaceAll(new RegExp(r"\s+"), "_");
   }
 
   getGrapeName(){

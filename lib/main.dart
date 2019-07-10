@@ -84,14 +84,14 @@ class TakePictureScreenState extends State<TakePictureScreen> {
         appBar: new AppBar(
           title: const Text('Photo Gallery'),
         ),
-        body: _buildGrid(allImages),
+        body: _buildGrid(allImages.reversed.toList()),
       );
     }));
   }
 
   Widget _buildGrid(allImages) {
     return GridView.extent(
-        maxCrossAxisExtent: 500.0,
+        maxCrossAxisExtent: 400.0,
         // padding: const EdgeInsets.all(4.0),
         mainAxisSpacing: 1.0,
         crossAxisSpacing: 1.0,
@@ -202,7 +202,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
         date.day.toString().padLeft(2, '0');
 
     // week varietal vine exposure
-    var name = '${_appDir}/' +
+    var name = _appDir +
         '${_currentGrape.getGrapeFilename()}_'+
         '${simpleDate}_'+
         'vine${_vineyardRow.toString()}_'+
@@ -212,6 +212,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   }
 
   String getFilename() {
+    var date = DateTime.now();
     var name = getRootFileName() +
         date.hour.toString() +
         "." +
@@ -249,6 +250,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     if (newNum > 0) {
       setState(() {
         _cluster = _cluster + diff;
+        setImageCount(_appDir);
       });
     }
   }
@@ -258,6 +260,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     if (newNum > 0) {
       setState(() {
         _vineyardRow = _vineyardRow + diff;
+        setImageCount(_appDir);
       });
     }
   }
@@ -265,13 +268,15 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   Future<void> setImageCount(path) async {
     List contents = listImages(path);
     int c= 0;
-    contents.forEach(file)=>{
-      if (file.path.contains(getRootFileName())){
-        c++
+    var rootFileName = getRootFileName();
+    for (var element in contents){
+      if (element.path.contains(rootFileName)){
+        c=c+1;
       }
     }
+
     setState(() {
-      _picCount = contents.length;
+      _picCount = c;
     });
   }
 
@@ -517,7 +522,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                   heroTag: "incVineBtn",
                   onPressed: () {
                     changeVine(1);
-                    setDirectory();
+                    //setDirectory();
                   },
                   child: Icon(Icons.arrow_upward),
                   backgroundColor: Colors.transparent,
@@ -533,7 +538,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                   heroTag: "decVineBtn",
                   onPressed: () {
                     changeVine(-1);
-                    setDirectory();
+                    //setDirectory();
                   },
                   child: Icon(Icons.arrow_downward),
                   backgroundColor: Colors.transparent,
@@ -565,7 +570,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                   heroTag: "IncClusterBtn",
                   onPressed: () {
                     changeCluster(1);
-                    setDirectory();
+                    //setDirectory();
                   },
                   child: Icon(Icons.arrow_upward),
                   backgroundColor: Colors.transparent,
@@ -581,7 +586,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                   heroTag: "decClusterBtn",
                   onPressed: () {
                     changeCluster(-1);
-                    setDirectory();
+                    //setDirectory();
                   },
                   child: Icon(Icons.arrow_downward),
                   backgroundColor: Colors.transparent,
