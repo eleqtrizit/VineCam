@@ -1,3 +1,3 @@
 # Vineyard Cam
 
-Camera targeted at Vineyards.  About 10% complete.
+Camera targeted at Vineyards.  About 95% complete.
