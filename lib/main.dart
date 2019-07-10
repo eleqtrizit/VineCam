@@ -75,7 +75,8 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   }
 
 
-  Future showGallery(BuildContext context, directory) async {
+  Future showGallery(BuildContext context, dirPath) async {
+    Directory directory = new Directory(dirPath);
     List allImages = await loadImageList(directory);
     return Navigator.of(context).push(MaterialPageRoute(builder: (context)
     {
@@ -192,14 +193,32 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     return retDate;
   }
 
-  String getFilename() {
+  String getRootFileName(){
     var date = DateTime.now();
-    var retDate = date.hour.toString() +
+    var simpleDate = date.year.toString() +
+        '-' +
+        date.month.toString().padLeft(2, '0') +
+        '-' +
+        date.day.toString().padLeft(2, '0');
+
+    // week varietal vine exposure
+    var name = '${_appDir}/' +
+        '${_currentGrape.getGrapeFilename()}_'+
+        '${simpleDate}_'+
+        'vine${_vineyardRow.toString()}_'+
+        '${_currentDirection}_'+
+        'cluster${_cluster.toString()}_';
+    return name;
+  }
+
+  String getFilename() {
+    var name = getRootFileName() +
+        date.hour.toString() +
         "." +
         date.minute.toString().padLeft(2, '0') +
         "." +
         date.second.toString().padLeft(2, '0');
-    return retDate + '.jpg';
+    return name + '.jpg';
   }
 
   List<FileSystemEntity> listImages(path) {
@@ -210,7 +229,8 @@ class TakePictureScreenState extends State<TakePictureScreen> {
 
   String getPath() {
     var date = getDate();
-    return '$_appDir/${_currentGrape.getGrapeFilename()}/$date/vine_${_vineyardRow.toString()}/$_currentDirection/cluster${_cluster.toString()}/';
+    return '$_appDir/';
+    //${_currentGrape.getGrapeFilename()}/$date/vine_${_vineyardRow.toString()}/$_currentDirection/cluster${_cluster.toString()}/';
   }
 
   setDirectory() async {
@@ -244,6 +264,12 @@ class TakePictureScreenState extends State<TakePictureScreen> {
 
   Future<void> setImageCount(path) async {
     List contents = listImages(path);
+    int c= 0;
+    contents.forEach(file)=>{
+      if (file.path.contains(getRootFileName())){
+        c++
+      }
+    }
     setState(() {
       _picCount = contents.length;
     });
@@ -374,7 +400,8 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                 fontSize: 18)),
         onPressed: () {
           setState(() {});
-          showGallery(context, directories[index]);
+          //showGallery(context, directories[index]);
+          showGallery(context, _appDir);
         });
   }
 
@@ -466,7 +493,8 @@ class TakePictureScreenState extends State<TakePictureScreen> {
             child: FloatingActionButton(
                 heroTag: "galleryBtn",
                 onPressed: () {
-                  directoryListings(context, _appDir);
+                  showGallery(context,_appDir);
+                  //directoryListings(context, _appDir);
                 },
                 child: Icon(Icons.image),
                 backgroundColor: Colors.transparent,
@@ -581,7 +609,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                     setDirectory();
 
                     // Attempt to take a picture and log where it's been saved.
-                    await _controller.takePicture(_currentDir + filename);
+                    await _controller.takePicture(filename);
                     await incImageCount();
                   } catch (e) {
                     // If an error occurs, log the error to the console.
