@@ -5,9 +5,15 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'grape_model.dart';
+import 'file_list_model.dart';
+import 'image_ops.dart';
 import 'package:simple_permissions/simple_permissions.dart';
+import 'package:flutter/painting.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 var test = "";
+
 
 Future<void> main() async {
   // Obtain a list of the available cameras on the device.
@@ -49,9 +55,50 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   var _picCount = 0;
   var _currentDir = "";
   List<Grape> _grapes = [];
-  Grape _currentGrape;
-  var _currentDirection = "";
-  bool _permissionsGranted = false;
+  Grape _currentGrape = Grape('loading');
+  var _currentDirection = "North";
+  bool photoDirectoryInitialized = false;
+  var imageOps = ImageOps();
+
+  @override
+  void initState() {
+    super.initState();
+    populateGrapes();
+    requestWritePermission();
+  }
+
+  void initStage2() {
+    setAppDirectory(); // contains _read()
+  }
+
+  _read() async {
+    final prefs = await SharedPreferences.getInstance();
+    _vineyardRow = prefs.getInt('_vineyardRow') ?? 1;
+    _cluster = prefs.getInt('_cluster') ?? 1;
+    var grapeName = prefs.getString('_currentGrape') ?? _grapes[0].getGrapeName();
+    _currentGrape = new Grape(grapeName);
+    _currentDirection = prefs.getString('_currentDirection') ?? 'North';
+    print('read: $_vineyardRow');
+    print('read: $_cluster');
+    print('read: $grapeName');
+    print('read: $_currentDirection');
+    setImageCount(_appDir);
+    setState(() {
+      print('Settings loaded');
+    });
+  }
+
+  _save() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setInt('_vineyardRow', _vineyardRow);
+    prefs.setInt('_cluster', _cluster);
+    prefs.setString('_currentGrape', _currentGrape.getGrapeName());
+    prefs.setString('_currentDirection', _currentDirection);
+    print('saved $_vineyardRow');
+    print('saved: $_cluster');
+    print('saved ${_currentGrape.getGrapeName()}');
+    print('saved: $_currentDirection');
+  }
 
   Color isActive(cmp1, cmp2) {
     if (cmp1 == cmp2) {
@@ -61,18 +108,72 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     }
   }
 
+  getEpoch(d) async {
+    DateTime lastModDate = await File(d).lastModified();
+    return lastModDate;
+  }
+
   Future loadImageList(directory) async {
     List allImages = [];
-
     var dirList = directory.list(recursive: true, followLinks: false);
+    List<PhotoFile> fullSizeList = [];
+    List<PhotoFile> thumbList = [];
 
     await for (FileSystemEntity entity in dirList) {
       if (entity is File) {
-        allImages.add(entity.path);
+        if (entity.path.contains('jpg')) {
+          fullSizeList.add(new PhotoFile(entity.path));
+        }
+        else {
+          thumbList.add(new PhotoFile(entity.path));
+        }
       }
     }
+
+    thumbList.sort((a,b) => a.compareTo(b));
+    for (var file in thumbList){
+      allImages.add(file.path);
+    }
+
     return allImages;
   }
+
+  Future showPicture(BuildContext context, path,dirPath) async {
+    return Navigator.of(context).push(MaterialPageRoute(builder: (context)
+    {
+      return MaterialApp(
+        home: Scaffold(
+          backgroundColor: Colors.black,
+          body: Column(
+            children: <Widget>[
+              Image.asset(
+                imageOps.getFullSize(path),
+                  fit: BoxFit.contain
+              ),
+              FloatingActionButton(
+                heroTag: "delPhoto",
+                onPressed: () {
+                  imageOps.delete(path);
+                  //imageCache.clear();
+                  setImageCount(dirPath);
+                  Navigator.pop(context);
+                  Navigator.pop(context);
+                  showGallery(context,dirPath);
+                },
+                child: Icon(Icons.delete,
+                  size: 60
+                ),
+                backgroundColor: Colors.transparent,
+                foregroundColor: Colors.white,
+              ),
+            ],
+          ),
+        ),
+      );
+    }));
+  }
+
+
 
 
   Future showGallery(BuildContext context, dirPath) async {
@@ -84,28 +185,33 @@ class TakePictureScreenState extends State<TakePictureScreen> {
         appBar: new AppBar(
           title: const Text('Photo Gallery'),
         ),
-        body: _buildGrid(allImages.reversed.toList()),
+        body: _buildGrid(allImages.reversed.toList(),dirPath),
       );
     }));
   }
 
-  Widget _buildGrid(allImages) {
+  Widget _buildGrid(allImages,dirPath) {
     return GridView.extent(
         maxCrossAxisExtent: 400.0,
         // padding: const EdgeInsets.all(4.0),
         mainAxisSpacing: 1.0,
         crossAxisSpacing: 1.0,
-        children: _buildGridTileList(allImages.length,allImages));
+        children: _buildGridTileList(allImages.length,allImages,dirPath));
   }
 
-  List<Container> _buildGridTileList(int count,List allImages) {
-    return List<Container>.generate(
+  List<GestureDetector> _buildGridTileList(int count,List allImages,dirPath) {
+    return List<GestureDetector>.generate(
         count,
-        (int index) => Container(
+        (int index) => GestureDetector(
+          onTap: (){
+            showPicture(context,allImages[index].toString(),dirPath);
+          },
+          child: new Container(
                 child: Image.file(
-              File(allImages[index].toString()),
-              fit: BoxFit.fitWidth,
-            )));
+                  File(allImages[index].toString()),
+                  fit: BoxFit.fitWidth,
+                  filterQuality: FilterQuality.low,
+            ))));
   }
 
   void setCurrentDirection(newDirection) {
@@ -115,6 +221,8 @@ class TakePictureScreenState extends State<TakePictureScreen> {
       } else {
         _currentDirection = newDirection;
       }
+      setImageCount(_appDir);
+      _save();
     });
   }
 
@@ -123,23 +231,17 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     _grapes.add(new Grape("Syrah"));
   }
 
-  void setDefaultGrape() {
-    if (_currentGrape == null) {
-      _currentGrape = _grapes[0];
-    }
-  }
-
-  Future setAppDirectory() async {
+  setAppDirectory() async {
     Directory appDir = await getExternalStorageDirectory();
-    print(appDir.path);
     setState(() {
       _appDir = appDir.path + "/VineCamPhotos/";
     });
     setDirectory();
+    _read();
   }
 
   // Platform messages are asynchronous, so we initialize in an async method.
-  Future requestWritePermission() async {
+  requestWritePermission() async {
     PermissionStatus permissionWriteStatus = await SimplePermissions.requestPermission(Permission.WriteExternalStorage);
     //PermissionStatus permissionReadStatus = await SimplePermissions.requestPermission(Permission.ReadExternalStorage);
     PermissionStatus permissionCamera = await SimplePermissions.requestPermission(Permission.Camera);
@@ -158,23 +260,14 @@ class TakePictureScreenState extends State<TakePictureScreen> {
 
       // Next, initialize the controller. This returns a Future.
       _initializeControllerFuture = _controller.initialize();
-      setState(() {
-        _permissionsGranted = true;
-      });
+      //setState(() {
+       // _permissionsGranted = true;
+      //});
+      initStage2();
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    requestWritePermission();
 
-
-    setAppDirectory();
-    populateGrapes();
-    setDefaultGrape();
-    setCurrentDirection("");
-  }
 
   @override
   void dispose() {
@@ -223,22 +316,28 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   }
 
   List<FileSystemEntity> listImages(path) {
-    var dir = new Directory(path);
-    List contents = dir.listSync();
+     List<FileSystemEntity> contents = [];
+    try {
+      var dir = new Directory(path);
+      contents = dir.listSync();
+    }
+    catch(e) {
+      print("Directory does not exist: "+path);
+    }
+
     return contents;
   }
 
   String getPath() {
-    var date = getDate();
+    //var date = getDate();
     return '$_appDir/';
     //${_currentGrape.getGrapeFilename()}/$date/vine_${_vineyardRow.toString()}/$_currentDirection/cluster${_cluster.toString()}/';
   }
 
-  setDirectory() async {
+  setDirectory() {
     final path = getPath();
     if (_currentDir != path) {
-      await new Directory(path).create(recursive: true);
-      setImageCount(path);
+      new Directory(path).createSync(recursive: true);
       setState(() {
         _currentDir = path;
       });
@@ -250,6 +349,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     if (newNum > 0) {
       setState(() {
         _cluster = _cluster + diff;
+        _save();
         setImageCount(_appDir);
       });
     }
@@ -260,13 +360,18 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     if (newNum > 0) {
       setState(() {
         _vineyardRow = _vineyardRow + diff;
+        _save();
         setImageCount(_appDir);
       });
     }
   }
 
   Future<void> setImageCount(path) async {
-    List contents = listImages(path);
+    List<FileSystemEntity> contents = [];
+    List<FileSystemEntity> tempContents = listImages(path);
+    if (tempContents.length>0){
+      contents=tempContents;
+    }
     int c= 0;
     var rootFileName = getRootFileName();
     for (var element in contents){
@@ -274,7 +379,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
         c=c+1;
       }
     }
-
+    print('Pictures counted: $_picCount');
     setState(() {
       _picCount = c;
     });
@@ -343,6 +448,8 @@ class TakePictureScreenState extends State<TakePictureScreen> {
         onPressed: () {
           setState(() {
             _currentGrape = _grapes[index];
+            _save();
+            setImageCount(_appDir);
           });
           Navigator.pop(context);
         });
@@ -506,7 +613,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                 foregroundColor: Colors.white),
           ),
           Positioned(
-            bottom: 0,
+            bottom: 200,
             left: 0,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -548,7 +655,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
             ),
           ),
           Positioned(
-            bottom: 0,
+            bottom: 200,
             right: 0,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -611,11 +718,12 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                     await _initializeControllerFuture;
 
                     var filename = getFilename();
-                    setDirectory();
+                    //setDirectory();
 
                     // Attempt to take a picture and log where it's been saved.
                     await _controller.takePicture(filename);
-                    await incImageCount();
+                    incImageCount();
+                    imageOps.saveThumb(filename);
                   } catch (e) {
                     // If an error occurs, log the error to the console.
                     print(e);
